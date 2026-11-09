@@ -755,7 +755,12 @@ function clock12(t){if(!t)return "—";var p=t.split(":"),h=+p[0];return (h%12||
 function show(t,ok){var m=$("msg");m.textContent=t;m.className="msg "+(ok?"ok":"err");m.hidden=false;clearTimeout(show.t);show.t=setTimeout(function(){m.hidden=true},5000)}
 function save(){try{localStorage.setItem("sh_me",JSON.stringify(ME))}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem("sh_me")||"null")}catch(e){return null}}
-function call(fn,args,ok,fail){
+var BGCALL={adminDecide:1,adminLeave:1,adminShortage:1,adminAdvance:1,requestExcuse:1,requestShortage:1,requestLeave:1,requestAdvance:1,supPay:1,supSetSales:1,supShortageDone:1,supAddPenalty:1,adminAdd:1,adminAddLeave:1,adminSetFri:1},BGQ=[],BGRUN=false;
+function bgCall(fn,args,ok,fail){var key=fn+JSON.stringify(args);if(BGQ.some(function(j){return j.key===key}))return;BGQ.push({key:key,fn:fn,args:args,ok:ok,fail:fail});show("بيتحفظ... كمّل شغلك عادي",true);bgNext()}
+function bgNext(){if(BGRUN||!BGQ.length)return;BGRUN=true;var j=BGQ[0];function done(){BGQ.shift();BGRUN=false;bgNext()}
+  var r=google.script.run.withSuccessHandler(function(x){MORESEQ++;try{j.ok(x);render()}finally{done()}}).withFailureHandler(function(e){try{if(!(j.fail&&j.fail(e)))show(((e&&e.message)||"حصلت مشكلة، جرّب تاني").replace(/^LOCKED:/,""),false);render()}finally{done()}});
+  r[j.fn].apply(r,j.args)}
+function call(fn,args,ok,fail){if(BGCALL[fn])return bgCall(fn,args,ok,fail);
   BUSY=true;render();
   var r=google.script.run.withSuccessHandler(function(x){BUSY=false;ok(x);render()}).withFailureHandler(function(e){BUSY=false;if(fail&&fail(e)){render();return}show(((e&&e.message)||"حصلت مشكلة، جرّب تاني").replace(/^LOCKED:/,""),false);if(!ST)startLogin();render()});
   r[fn].apply(r,args);
